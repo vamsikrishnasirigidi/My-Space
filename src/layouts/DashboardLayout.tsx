@@ -57,7 +57,7 @@ export const DashboardLayout: React.FC = () => {
       // Stop processing single-key shortcuts when user is focused inside input forms
       if (isInputFocused) return;
 
-      // N -> New Note
+      // New Note
       if (e.key === 'n' || e.key === 'N') {
         e.preventDefault();
         navigate('/notes');
