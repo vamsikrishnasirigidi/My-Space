@@ -17,7 +17,6 @@ interface GenerationOptions {
 export async function callOpenAI({
   prompt,
   type,
-  options,
 }: {
   prompt: string;
   type: 'email' | 'linkedin' | 'instagram' | 'custom';
