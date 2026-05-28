@@ -146,7 +146,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {!isCollapsed && (
               <button
                 onClick={() => signOut()}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-all"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-all cursor-pointer"
                 title="Log out"
               >
                 <LogOut className="h-4 w-4" />

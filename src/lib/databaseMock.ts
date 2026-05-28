@@ -1,4 +1,5 @@
 import type { UserProfile, Todo, Note } from '../types';
+import { getLocalDateISO } from '../utils/date';
 
 // Mock Seed Data
 const DEFAULT_USER: UserProfile = {
@@ -12,8 +13,13 @@ const DEFAULT_USER: UserProfile = {
 const getTodayDateStr = (offsetDays = 0) => {
   const d = new Date();
   d.setDate(d.getDate() + offsetDays);
-  return d.toISOString().split('T')[0];
+  return getLocalDateISO(d);
 };
+interface MockSession {
+  access_token: string;
+  user: UserProfile;
+}
+
 
 const DEFAULT_TODOS = (): Todo[] => [
   {
@@ -160,7 +166,7 @@ export const databaseMock = {
     return session ? JSON.parse(session) : null;
   },
 
-  setSession: (session: any) => {
+  setSession: (session: MockSession | null) => {
     if (session) {
       localStorage.setItem(KEYS.AUTH, JSON.stringify(session));
     } else {

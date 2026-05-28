@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { toast } from '../store/toastStore';
+import { getLocalDateISO } from '../utils/date';
 
 // Pre-seeded inspirational quotes list
 const QUOTES = [
@@ -44,15 +45,19 @@ export const Home: React.FC = () => {
   // Pomodoro/Focus Timer State
   const [timerSeconds, setTimerSeconds] = useState(1500); // 25 minutes
   const [timerActive, setTimerActive] = useState(false);
-  const [selectedQuote, setSelectedQuote] = useState(QUOTES[0]);
+  const [selectedQuote] = useState(() => QUOTES[Math.floor(Math.random() * QUOTES.length)]);
+
+  // Format seconds to MM:SS
+  const formatTimer = (secs: number) => {
+    const mins = Math.floor(secs / 60);
+    const remaining = secs % 60;
+    return `${mins.toString().padStart(2, '0')}:${remaining.toString().padStart(2, '0')}`;
+  };
 
   // Fetch all necessary dashboard data on mount
   useEffect(() => {
     fetchTodos();
     fetchNotes();
-    // Select a random quote on refresh
-    const randomIdx = Math.floor(Math.random() * QUOTES.length);
-    setSelectedQuote(QUOTES[randomIdx]);
   }, [fetchTodos, fetchNotes]);
 
   // Browser Tab Title Watcher for Focus Timer
@@ -72,21 +77,25 @@ export const Home: React.FC = () => {
 
   // Focus Timer Logic
   useEffect(() => {
-    let interval: any = null;
-    if (timerActive && timerSeconds > 0) {
-      interval = setInterval(() => {
-        setTimerSeconds(s => s - 1);
-      }, 1000);
-    } else if (timerSeconds === 0) {
-      setTimerActive(false);
-      toast.success('Focus session completed! Outstanding job. 🎉');
-      useActivityStore.getState().addLog('focus', 'Completed a 25-minute Deep Focus session 🧘');
-    }
+    if (!timerActive || timerSeconds <= 0) return undefined;
+    const interval: ReturnType<typeof setInterval> = setInterval(() => {
+      setTimerSeconds(prev => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          setTimerActive(false);
+          toast.success('Focus session completed! Outstanding job. 🎉');
+          useActivityStore.getState().addLog('focus', 'Completed a 25-minute Deep Focus session 🧘');
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
     return () => {
-      if (interval) clearInterval(interval);
+      clearInterval(interval);
     };
   }, [timerActive, timerSeconds]);
-
+  
   // Dynamic Time-based Welcome Greeting
   const getGreeting = () => {
     const hours = new Date().getHours();
@@ -97,7 +106,7 @@ export const Home: React.FC = () => {
 
   // Helper date conversions
   const getTodayDateStr = () => {
-    return new Date().toISOString().split('T')[0];
+    return getLocalDateISO();
   };
 
   // Filters for Dashboard widgets
@@ -111,13 +120,6 @@ export const Home: React.FC = () => {
   const completedTasksCount = todos.filter(t => t.status === 'completed').length;
   const pendingTasksCount = totalTasks - completedTasksCount;
   const completionRate = totalTasks > 0 ? Math.round((completedTasksCount / totalTasks) * 100) : 0;
-
-  // Format seconds to MM:SS
-  const formatTimer = (secs: number) => {
-    const mins = Math.floor(secs / 60);
-    const remaining = secs % 60;
-    return `${mins.toString().padStart(2, '0')}:${remaining.toString().padStart(2, '0')}`;
-  };
 
   const handleToggleTodoStatus = async (id: string, currentStatus: string) => {
     const newStatus = currentStatus === 'completed' ? 'pending' : 'completed';
@@ -421,7 +423,7 @@ export const Home: React.FC = () => {
                 const d = new Date();
                 d.setDate(d.getDate() - i);
                 last7.push({
-                  dateStr: d.toISOString().split('T')[0],
+                  dateStr: getLocalDateISO(d),
                   label: days[d.getDay()],
                   count: 0
                 });
@@ -473,7 +475,7 @@ export const Home: React.FC = () => {
               const d = new Date();
               d.setDate(d.getDate() - i);
               last7.push({
-                dateStr: d.toISOString().split('T')[0],
+                dateStr: getLocalDateISO(d),
                 label: days[d.getDay()],
                 completed: 0
               });

@@ -32,11 +32,9 @@ export const FormatterPage: React.FC = () => {
   // Simulated Streaming/Typing Effect
   useEffect(() => {
     if (!outputText) {
-      setStreamedOutput('');
       return;
     }
 
-    setStreamedOutput('');
     let idx = 0;
     const words = outputText.split(' ');
     
@@ -71,7 +69,7 @@ export const FormatterPage: React.FC = () => {
         'ai', 
         `Formatted text draft using "${action}" model (${inputWords} input words)`
       );
-    } catch (err) {
+    } catch {
       toast.error('AI text processing failed');
     } finally {
       setProcessing(false);

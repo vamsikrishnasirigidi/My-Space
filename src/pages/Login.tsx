@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { Navigate } from 'react-router-dom';
-import { ArrowRight, ShieldCheck, Zap, Layers } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { cn } from '../utils/cn';
 
 export const Login: React.FC = () => {
@@ -47,7 +47,7 @@ export const Login: React.FC = () => {
             Secure Authorization
           </h2>
           <p className="text-xs text-slate-400 dark:text-slate-500 mb-6">
-            Get started immediately. Real Supabase OAuth and sandbox modes are fully synchronized.
+            Get started immediately.
           </p>
 
           <button
@@ -95,25 +95,6 @@ export const Login: React.FC = () => {
               </>
             )}
           </button>
-        </div>
-
-        {/* Feature Highlights Grid */}
-        <div className="mt-8 grid grid-cols-3 gap-3">
-          <div className="flex flex-col items-center text-center p-3 rounded-2xl bg-white/40 dark:bg-slate-900/20 border border-slate-200/20 dark:border-slate-800/10">
-            <Zap className="h-4.5 w-4.5 text-indigo-500 mb-1.5" />
-            <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300">Blazing Fast</span>
-            <span className="text-[9px] text-slate-400 dark:text-slate-500 mt-0.5 leading-normal">Optimized state stores</span>
-          </div>
-          <div className="flex flex-col items-center text-center p-3 rounded-2xl bg-white/40 dark:bg-slate-900/20 border border-slate-200/20 dark:border-slate-800/10">
-            <Layers className="h-4.5 w-4.5 text-blue-500 mb-1.5" />
-            <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300">Notion Style</span>
-            <span className="text-[9px] text-slate-400 dark:text-slate-500 mt-0.5 leading-normal">TipTap block rich texts</span>
-          </div>
-          <div className="flex flex-col items-center text-center p-3 rounded-2xl bg-white/40 dark:bg-slate-900/20 border border-slate-200/20 dark:border-slate-800/10">
-            <ShieldCheck className="h-4.5 w-4.5 text-emerald-500 mb-1.5" />
-            <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300">Secure Sync</span>
-            <span className="text-[9px] text-slate-400 dark:text-slate-500 mt-0.5 leading-normal">Row Level Security</span>
-          </div>
         </div>
       </div>
     </div>

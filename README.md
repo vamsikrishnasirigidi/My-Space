@@ -1,73 +1,95 @@
-# React + TypeScript + Vite
+# My Space
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+My Space is a productivity web app built with React + TypeScript + Vite.  
+It includes:
 
-Currently, two official plugins are available:
+- Dashboard overview
+- Todo planner (calendar, list, kanban)
+- Notes workspace (TipTap rich editor)
+- AI formatter and AI content generator
+- Supabase auth/data mode with local mock fallback
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Tech Stack
 
-## React Compiler
+- React 19
+- TypeScript
+- Vite
+- Zustand
+- Tailwind CSS
+- Supabase
+- Vercel (hosting + serverless API routes)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Prerequisites
 
-## Expanding the ESLint configuration
+- Node.js 20+
+- npm
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Installation
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Environment Setup
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Create a `.env.local` file at project root.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Required for Supabase mode (optional if you want mock mode)
+
+```env
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
+
+If these are missing, app runs in local mock mode automatically.
+
+### Required for AI generation
+
+Use server-side keys (do not prefix with `VITE_`):
+
+```env
+# Preferred
+GEMINI_API_KEY=your_gemini_key
+
+# Optional fallback
+OPENAI_API_KEY=your_openai_key
+OPENAI_MODEL=gpt-4o-mini
+```
+
+## Running Locally
+
+```bash
+npm run dev
+```
+
+The app runs on Vite dev server, and `/api/ai/generate` is handled locally by Vite middleware in development.
+
+## Build and Lint
+
+```bash
+npm run lint
+npm run build
+```
+
+## Production Deployment (Vercel)
+
+This project is ready for Vercel:
+
+- Frontend is served as SPA.
+- `api/ai/generate.js` is deployed as a serverless function.
+- `vercel.json` rewrites support both API and SPA routing.
+
+### Vercel Environment Variables
+
+Set these in Vercel Project Settings:
+
+- `GEMINI_API_KEY` (recommended), or
+- `OPENAI_API_KEY` (+ optional `OPENAI_MODEL`)
+- `VITE_SUPABASE_URL` (if using Supabase)
+- `VITE_SUPABASE_ANON_KEY` (if using Supabase)
+
+## Notes
+
+- Do not store provider keys in `VITE_*` variables.
+- `VITE_*` values are exposed to the browser.
+- Server keys must remain server-side only.

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { NodeViewWrapper, NodeViewContent } from '@tiptap/react';
+import { NodeViewWrapper, NodeViewContent, type NodeViewProps } from '@tiptap/react';
 import { Copy, Check } from 'lucide-react';
 
-export const CodeBlockComponent = ({ node, updateAttributes }: any) => {
+export const CodeBlockComponent = ({ node, updateAttributes }: NodeViewProps) => {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -54,7 +54,7 @@ export const CodeBlockComponent = ({ node, updateAttributes }: any) => {
       </div>
       
       <pre className="p-4 overflow-x-auto bg-slate-950 m-0 leading-normal">
-        <NodeViewContent as={"code" as any} className="font-mono text-sm block outline-none" />
+        <NodeViewContent className="font-mono text-sm block outline-none" />
       </pre>
     </NodeViewWrapper>
   );

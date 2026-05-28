@@ -3,19 +3,15 @@ import { useAuthStore } from '../store/authStore';
 import { useThemeStore, type Theme, type AccentColor, type SidebarStyle, type RoundedLevel } from '../store/themeStore';
 import { toast } from '../store/toastStore';
 import { useActivityStore } from '../store/activityStore';
-import { isMock } from '../lib/supabase';
 import { 
   User, 
   Settings, 
   Sun, 
   Moon, 
   Monitor,
-  Database, 
   LogOut, 
   Check, 
-  ShieldAlert,
   Save,
-  Code,
   Palette,
   LayoutGrid,
   Minimize2
@@ -58,7 +54,7 @@ export const SettingsPage: React.FC = () => {
         'system', 
         `Updated workspace preferences (theme: ${selectedTheme}, accent: ${accent}, compact: ${compact})`
       );
-    } catch (err) {
+    } catch {
       toast.error('Failed to update workspace settings');
     } finally {
       setUpdating(false);
@@ -332,63 +328,6 @@ export const SettingsPage: React.FC = () => {
               </button>
             </div>
           </form>
-
-          {/* Database Setup & Sync Information Card */}
-          <div className="glass-panel rounded-3xl p-6 bg-white dark:bg-slate-900/30 flex flex-col gap-4">
-            <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 border-b border-slate-100 dark:border-slate-800/40 pb-3">
-              <Database className="h-4.5 w-4.5 text-brand-500" />
-              <span>Database Sync Center</span>
-            </h3>
-
-            {isMock ? (
-              <div className="flex flex-col gap-3">
-                <div className="flex items-start gap-3 p-3 rounded-2xl bg-amber-500/[0.05] border border-amber-500/20 text-amber-600 dark:text-amber-400">
-                  <ShieldAlert className="h-5 w-5 shrink-0 mt-0.5" />
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-xs font-bold">Running in Sandbox Mode</span>
-                    <p className="text-[10px] text-amber-500/80 leading-normal">
-                      Your data is saved safely in the local browser Cache. Connecting a Supabase Project will allow global access across all devices and unlock real-time database indexing.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-2.5 mt-2">
-                  <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
-                    <Code className="h-3.5 w-3.5" />
-                    <span>How to connect real Supabase</span>
-                  </span>
-                  
-                  <div className="text-[10px] leading-relaxed text-slate-500 dark:text-slate-400 flex flex-col gap-2">
-                    <p>
-                      1. Create a free account at **[supabase.com](https://supabase.com)** and create a new project named "My Space".
-                    </p>
-                    <p>
-                      2. Open your project settings under **API** and copy the **Project URL** and **Anon API Key**.
-                    </p>
-                    <p>
-                      3. Create a file named `.env` or `.env.local` inside the directory:  
-                      `C:\Users\Vamsi\.gemini\antigravity\scratch\my-space\.env`  
-                      and paste your copied keys:
-                    </p>
-                    <pre className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 font-mono text-[9px]">
-                      VITE_SUPABASE_URL=https://your-project.supabase.co{"\n"}
-                      VITE_SUPABASE_ANON_KEY=your-anon-api-key-here
-                    </pre>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-start gap-3 p-4 rounded-2xl bg-brand-500/[0.04] border border-brand-500/20 text-brand-600 dark:text-brand-400 animate-fade-in">
-                <Database className="h-5 w-5 shrink-0 mt-0.5 animate-pulse-subtle" />
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-xs font-bold">Cloud Syncing Active</span>
-                  <p className="text-[10px] text-brand-500/80 leading-normal">
-                    You are connected to a Live Supabase Cloud project. All todos, notes, profiles, and theme preferences sync automatically and remain protected by PostgreSQL RLS safety checks.
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
         </div>
       </div>
     </div>
