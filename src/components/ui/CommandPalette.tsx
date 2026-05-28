@@ -61,37 +61,9 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     if (isOpen) {
       useTodoStore.getState().fetchTodos();
       useNoteStore.getState().fetchNotes();
-      setQuery('');
-      setSelectedIndex(0);
       setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, [isOpen]);
-
-  // Handle escape, arrows and enter keys
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        onClose();
-      } else if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        setSelectedIndex(prev => (prev + 1) % filteredItems.length);
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        setSelectedIndex(prev => (prev - 1 + filteredItems.length) % filteredItems.length);
-      } else if (e.key === 'Enter') {
-        e.preventDefault();
-        if (filteredItems[selectedIndex]) {
-          filteredItems[selectedIndex].action();
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, selectedIndex, query, notes, todos]);
 
   // Keep selected item visible in scroll view
   useEffect(() => {
@@ -283,6 +255,36 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     const searchStr = `${item.title} ${item.subtitle || ''} ${item.category}`.toLowerCase();
     return searchStr.includes(query.toLowerCase());
   });
+
+  // Handle escape, arrows and enter keys
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (filteredItems.length > 0) {
+          setSelectedIndex(prev => (prev + 1) % filteredItems.length);
+        }
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (filteredItems.length > 0) {
+          setSelectedIndex(prev => (prev - 1 + filteredItems.length) % filteredItems.length);
+        }
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (filteredItems[selectedIndex]) {
+          filteredItems[selectedIndex].action();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [filteredItems, isOpen, onClose, selectedIndex]);
 
   if (!isOpen) return null;
 

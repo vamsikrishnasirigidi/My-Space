@@ -14,6 +14,11 @@ interface AuthState {
   checkSession: () => Promise<void>;
 }
 
+const getErrorMessage = (err: unknown, fallback: string) => {
+  if (err instanceof Error && err.message) return err.message;
+  return fallback;
+};
+
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   loading: false,
@@ -29,6 +34,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         databaseMock.setSession({ access_token: 'mock-token', user: mockUser });
         set({ user: mockUser, loading: false });
       } else {
+        if (!supabase) throw new Error('Supabase client is not initialized.');
         const { error } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
@@ -37,9 +43,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         });
         if (error) throw error;
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Google Sign In Error:', err);
-      toast.error(err?.message || 'Google Sign-In failed. Please check your Supabase Dashboard configuration.');
+      toast.error(getErrorMessage(err, 'Google Sign-In failed. Please check your Supabase Dashboard configuration.'));
       set({ loading: false });
     }
   },
@@ -52,13 +58,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         databaseMock.setSession(null);
         set({ user: null, loading: false });
       } else {
+        if (!supabase) throw new Error('Supabase client is not initialized.');
         const { error } = await supabase.auth.signOut();
         if (error) throw error;
         set({ user: null, loading: false });
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Sign Out Error:', err);
-      toast.error(err?.message || 'Sign-Out failed.');
+      toast.error(getErrorMessage(err, 'Sign-Out failed.'));
       set({ loading: false });
     }
   },
@@ -73,6 +80,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const updated = databaseMock.updateUser({ name, theme });
         set({ user: updated, loading: false });
       } else {
+        if (!supabase) throw new Error('Supabase client is not initialized.');
         const { error } = await supabase
           .from('users')
           .update({ name, theme })
@@ -81,9 +89,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         if (error) throw error;
         set({ user: { ...current, name, theme }, loading: false });
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Update Profile Error:', err);
-      toast.error(err?.message || 'Failed to update profile.');
+      toast.error(getErrorMessage(err, 'Failed to update profile.'));
       set({ loading: false });
     }
   },
@@ -98,6 +106,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           set({ user: mockUser });
         }
       } else {
+        if (!supabase) throw new Error('Supabase client is not initialized.');
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
           // Fetch user profile from public.users
@@ -122,9 +131,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           }
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Check Session Error:', err);
-      toast.error(err?.message || 'Failed to sync database session. Make sure SQL tables are initialized.');
+      toast.error(getErrorMessage(err, 'Failed to sync database session. Make sure SQL tables are initialized.'));
     } finally {
       set({ loading: false, initialized: true });
     }

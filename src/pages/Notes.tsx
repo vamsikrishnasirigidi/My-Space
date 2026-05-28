@@ -86,59 +86,12 @@ export const NotesPage: React.FC = () => {
 
   // Stale closures solution
   const slashMenuRef = useRef(slashMenu);
-  slashMenuRef.current = slashMenu;
   const filteredCommandsRef = useRef(filteredCommands);
-  filteredCommandsRef.current = filteredCommands;
 
-  const handleSelectCommand = (cmd: typeof COMMANDS[0]) => {
-    if (!editor) return;
-
-    const { selection } = editor.state;
-    const currentPos = selection.from;
-    const startPos = slashMenuRef.current.startPos;
-
-    // 1. Delete the slash and query text
-    editor.chain().focus().deleteRange({ from: startPos, to: currentPos }).run();
-
-    // 2. Insert the specific block
-    switch (cmd.id) {
-      case 'h1':
-        editor.chain().focus().toggleHeading({ level: 1 }).run();
-        break;
-      case 'h2':
-        editor.chain().focus().toggleHeading({ level: 2 }).run();
-        break;
-      case 'h3':
-        editor.chain().focus().toggleHeading({ level: 3 }).run();
-        break;
-      case 'bullet':
-        editor.chain().focus().toggleBulletList().run();
-        break;
-      case 'numbered':
-        editor.chain().focus().toggleOrderedList().run();
-        break;
-      case 'quote':
-        editor.chain().focus().toggleBlockquote().run();
-        break;
-      case 'code':
-        editor.chain().focus().toggleCodeBlock().run();
-        break;
-      case 'todo':
-        // Simulating todo item with interactive bullet
-        editor.chain().focus().toggleBulletList().run();
-        break;
-      case 'divider':
-        editor.chain().focus().setHorizontalRule().run();
-        break;
-      default:
-        break;
-    }
-
-    setSlashMenu(prev => ({ ...prev, isOpen: false }));
-  };
-
-  const handleSelectCommandRef = useRef(handleSelectCommand);
-  handleSelectCommandRef.current = handleSelectCommand;
+  useEffect(() => {
+    slashMenuRef.current = slashMenu;
+    filteredCommandsRef.current = filteredCommands;
+  }, [slashMenu, filteredCommands]);
 
   // Initialize TipTap Editor
   const editor = useEditor({
@@ -175,7 +128,7 @@ export const NotesPage: React.FC = () => {
           }
           if (event.key === 'Enter') {
             if (filtered[state.index]) {
-              handleSelectCommandRef.current(filtered[state.index]);
+              handleSelectCommand(filtered[state.index]);
             }
             return true;
           }
@@ -189,7 +142,7 @@ export const NotesPage: React.FC = () => {
           const { selection } = view.state;
           const coords = view.coordsAtPos(selection.from);
           let top = coords.bottom + window.scrollY;
-          let left = coords.left + window.scrollX;
+          const left = coords.left + window.scrollX;
           
           // Adjust top if it goes off bottom of viewport
           if (coords.bottom + 250 > window.innerHeight) {
@@ -238,6 +191,50 @@ export const NotesPage: React.FC = () => {
     }
   });
 
+  const handleSelectCommand = (cmd: typeof COMMANDS[0]) => {
+    if (!editor) return;
+
+    const { selection } = editor.state;
+    const currentPos = selection.from;
+    const startPos = slashMenuRef.current.startPos;
+
+    editor.chain().focus().deleteRange({ from: startPos, to: currentPos }).run();
+
+    switch (cmd.id) {
+      case 'h1':
+        editor.chain().focus().toggleHeading({ level: 1 }).run();
+        break;
+      case 'h2':
+        editor.chain().focus().toggleHeading({ level: 2 }).run();
+        break;
+      case 'h3':
+        editor.chain().focus().toggleHeading({ level: 3 }).run();
+        break;
+      case 'bullet':
+        editor.chain().focus().toggleBulletList().run();
+        break;
+      case 'numbered':
+        editor.chain().focus().toggleOrderedList().run();
+        break;
+      case 'quote':
+        editor.chain().focus().toggleBlockquote().run();
+        break;
+      case 'code':
+        editor.chain().focus().toggleCodeBlock().run();
+        break;
+      case 'todo':
+        editor.chain().focus().toggleBulletList().run();
+        break;
+      case 'divider':
+        editor.chain().focus().setHorizontalRule().run();
+        break;
+      default:
+        break;
+    }
+
+    setSlashMenu(prev => ({ ...prev, isOpen: false }));
+  };
+
   // Autosave notes debouncer (1.5s)
   useEffect(() => {
     if (!editingNote || !isModalOpen) return;
@@ -255,7 +252,7 @@ export const NotesPage: React.FC = () => {
         });
         setEditingNote(prev => prev ? { ...prev, title: formTitle, content: formContent } : null);
         toast.success('Draft autosaved');
-      } catch (err) {
+      } catch {
         // Silently capture any errors during background sync
       }
     }, 1500);
@@ -268,6 +265,29 @@ export const NotesPage: React.FC = () => {
     fetchNotes();
   }, [fetchNotes]);
 
+  // Listen to global palette/shortcut custom events
+  useEffect(() => {
+    const handleOpenNote = (e: Event) => {
+      const noteId = (e as CustomEvent<string>).detail;
+      const found = notes.find(n => n.id === noteId);
+      if (found) {
+        handleOpenEditModal(found);
+      }
+    };
+
+    const handleOpenNew = () => {
+      handleOpenAddModal();
+    };
+
+    window.addEventListener('open-palette-note', handleOpenNote);
+    window.addEventListener('open-new-note-modal', handleOpenNew);
+
+    return () => {
+      window.removeEventListener('open-palette-note', handleOpenNote);
+      window.removeEventListener('open-new-note-modal', handleOpenNew);
+    };
+  }, [notes]);
+
   // Synchronize editor content when opening a note or creating one
   useEffect(() => {
     if (editor && isModalOpen) {
@@ -276,7 +296,7 @@ export const NotesPage: React.FC = () => {
   }, [formContent, editor, isModalOpen]);
 
   // Open Modal for Add
-  const handleOpenAddModal = () => {
+  function handleOpenAddModal() {
     setEditingNote(null);
     setFormTitle('');
     setFormContent('<p></p>');
@@ -284,10 +304,10 @@ export const NotesPage: React.FC = () => {
     setFormPinToHome(false);
     setShowCoverInput(false);
     setIsModalOpen(true);
-  };
+  }
 
   // Open Modal for Edit
-  const handleOpenEditModal = (note: Note) => {
+  function handleOpenEditModal(note: Note) {
     setEditingNote(note);
     setFormTitle(note.title);
     setFormContent(note.content);
@@ -295,11 +315,11 @@ export const NotesPage: React.FC = () => {
     setFormPinToHome(note.show_in_home);
     setShowCoverInput(!!note.image_url);
     setIsModalOpen(true);
-  };
+  }
 
   // Save / Update Notes Submit
-  const handleSaveNoteSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSaveNoteSubmit = async (e?: React.SyntheticEvent) => {
+    e?.preventDefault();
     if (!formTitle.trim()) {
       toast.error('Note title is required');
       return;
@@ -328,7 +348,7 @@ export const NotesPage: React.FC = () => {
         useActivityStore.getState().addLog('note', `Created note: "${formTitle}"`);
       }
       setIsModalOpen(false);
-    } catch (err) {
+    } catch {
       toast.error('Failed to save note');
     }
   };
@@ -342,7 +362,7 @@ export const NotesPage: React.FC = () => {
         toast.success('Note deleted successfully');
         useActivityStore.getState().addLog('note', `Deleted note: "${titleToLog}"`);
         setIsModalOpen(false);
-      } catch (err) {
+      } catch {
         toast.error('Failed to delete note');
       }
     }
@@ -355,7 +375,7 @@ export const NotesPage: React.FC = () => {
       await updateNote(note.id, { show_in_home: !note.show_in_home });
       toast.success(note.show_in_home ? 'Note removed from dashboard' : 'Note pinned to dashboard');
       useActivityStore.getState().addLog('note', note.show_in_home ? `Unpinned note from dashboard: "${note.title}"` : `Pinned note to dashboard: "${note.title}"`);
-    } catch (err) {
+    } catch {
       toast.error('Failed to toggle pin');
     }
   };
@@ -403,6 +423,7 @@ export const NotesPage: React.FC = () => {
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <input
             type="text"
+            data-global-search="true"
             placeholder="Search notes..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}

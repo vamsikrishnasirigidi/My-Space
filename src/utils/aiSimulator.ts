@@ -3,7 +3,7 @@
  * Generates context-aware, beautiful text based on inputs.
  */
 
-import { callGemini } from '../services/gemini';
+import { callAIService } from '../services/ai';
 
 export const aiSimulator = {
   /**
@@ -34,6 +34,7 @@ Here is a polished, highly professional rewrite of your text. I have enhanced th
 - Strengthened active verbs for increased persuasive impact.`;
 
       case 'shorten':
+      {
         const highlight = words.slice(0, Math.min(words.length, 6)).join(' ');
         return `⚡ **Shortened Version (Concise & Impactful)** ⚡
 
@@ -45,6 +46,7 @@ Here is a streamlined, impact-driven summary of your input. I have condensed the
 - Extracted core value proposition.
 - Eliminated redundant adjectives.
 - Reduced overall word count by approximately 60%.`;
+      }
 
       case 'enlarge':
         return `🚀 **Expanded Version (Comprehensive & Detailed)** 🚀
@@ -84,16 +86,16 @@ Begin by isolating your primary bottleneck, then leverage cooperative channels t
       return "Please input a prompt or topic so I can generate beautiful custom copy for you.";
     }
 
-    // Forward request to OpenAI service (serverless function or direct call depending on env)
+    // Forward request to backend AI gateway (keys remain server-side)
     try {
-      const result = await callGemini({
+      const result = await callAIService({
         prompt: cleanPrompt,
         type,
         options,
       });
       return result;
     } catch (err) {
-      console.error('OpenAI error', err);
+      console.error('AI generation error', err);
       // Fallback to static mock if API fails
       return "Sorry, the AI service is currently unavailable. Please try again later.";
     }

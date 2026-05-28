@@ -11,7 +11,8 @@ import { Sparkles } from 'lucide-react';
 export const DashboardLayout: React.FC = () => {
   const navigate = useNavigate();
   const { user, loading, initialized, checkSession } = useAuthStore();
-  const themeStore = useThemeStore();
+  const theme = useThemeStore(state => state.theme);
+  const setTheme = useThemeStore(state => state.setTheme);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
@@ -23,10 +24,10 @@ export const DashboardLayout: React.FC = () => {
 
   // Synchronize system styling once user is verified
   useEffect(() => {
-    if (user?.theme) {
-      themeStore.setTheme(user.theme as 'light' | 'dark');
+    if (user?.theme && theme !== user.theme) {
+      setTheme(user.theme as 'light' | 'dark');
     }
-  }, [user]);
+  }, [setTheme, theme, user?.theme]);
 
   // Global Keyboard Shortcuts Hook
   useEffect(() => {
@@ -50,7 +51,7 @@ export const DashboardLayout: React.FC = () => {
       // Ctrl/Cmd + Shift + D -> Toggle Dark Mode
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'd') {
         e.preventDefault();
-        themeStore.setTheme(themeStore.theme === 'light' ? 'dark' : 'light');
+        setTheme(theme === 'light' ? 'dark' : 'light');
         return;
       }
 
@@ -80,7 +81,7 @@ export const DashboardLayout: React.FC = () => {
       // / -> Focus Search Bar
       if (e.key === '/') {
         e.preventDefault();
-        const searchInput = document.getElementById('global-search-input');
+        const searchInput = document.querySelector<HTMLInputElement>('[data-global-search="true"]');
         if (searchInput) {
           searchInput.focus();
         }
@@ -90,7 +91,7 @@ export const DashboardLayout: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [navigate, themeStore]);
+  }, [navigate, setTheme, theme]);
 
   // Show a gorgeous modern loading skeleton on boot
   if (!initialized || (loading && !user)) {

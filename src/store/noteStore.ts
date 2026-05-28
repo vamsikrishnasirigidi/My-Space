@@ -24,6 +24,7 @@ export const useNoteStore = create<NoteState>((set) => ({
         const list = databaseMock.getNotes();
         set({ notes: list, loading: false });
       } else {
+        if (!supabase) throw new Error('Supabase client is not initialized.');
         const user = useAuthStore.getState().user;
         if (!user) return;
 
@@ -48,6 +49,7 @@ export const useNoteStore = create<NoteState>((set) => ({
         const newNote = databaseMock.createNote(note);
         set(state => ({ notes: [newNote, ...state.notes] }));
       } else {
+        if (!supabase) throw new Error('Supabase client is not initialized.');
         const user = useAuthStore.getState().user;
         if (!user) return;
 
@@ -76,6 +78,7 @@ export const useNoteStore = create<NoteState>((set) => ({
           notes: state.notes.map(n => (n.id === id ? updated : n)),
         }));
       } else {
+        if (!supabase) throw new Error('Supabase client is not initialized.');
         const { error } = await supabase
           .from('notes')
           .update(updates)
@@ -98,6 +101,7 @@ export const useNoteStore = create<NoteState>((set) => ({
         databaseMock.deleteNote(id);
         set(state => ({ notes: state.notes.filter(n => n.id !== id) }));
       } else {
+        if (!supabase) throw new Error('Supabase client is not initialized.');
         const { error } = await supabase
           .from('notes')
           .delete()

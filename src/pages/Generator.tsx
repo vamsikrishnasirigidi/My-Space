@@ -43,6 +43,8 @@ export const GeneratorPage: React.FC = () => {
   const [generating, setGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  type ContentType = 'email' | 'linkedin' | 'instagram' | 'custom';
+
   // Statistics
   const getWordCount = (text: string) => text.split(/\s+/).filter(Boolean).length;
   const outputWords = getWordCount(outputText);
@@ -50,11 +52,9 @@ export const GeneratorPage: React.FC = () => {
   // Streaming Text Word-by-Word Reveal
   useEffect(() => {
     if (!outputText) {
-      setStreamedOutput('');
       return;
     }
 
-    setStreamedOutput('');
     let idx = 0;
     const words = outputText.split(' ');
     
@@ -92,7 +92,7 @@ export const GeneratorPage: React.FC = () => {
         'ai', 
         `Generated AI ${contentType === 'email' ? `email (${emailTone} tone)` : contentType === 'linkedin' ? `LinkedIn post (${linkedinHook} hook)` : contentType} content for prompt: "${prompt.slice(0, 30)}..."`
       );
-    } catch (err) {
+    } catch {
       toast.error('AI content generation failed');
     } finally {
       setGenerating(false);
@@ -168,7 +168,7 @@ export const GeneratorPage: React.FC = () => {
                     <button
                       key={opt.id}
                       type="button"
-                      onClick={() => setContentType(opt.id as any)}
+                      onClick={() => setContentType(opt.id as ContentType)}
                       className={cn(
                         "flex items-center gap-2 p-3 rounded-2xl border text-xs font-bold transition-all text-left shadow-sm select-none cursor-pointer",
                         isSelected

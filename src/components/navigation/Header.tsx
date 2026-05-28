@@ -1,15 +1,11 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
-import { isMock } from '../../lib/supabase';
 import { 
   Menu, 
   Sun, 
-  Moon, 
-  Database,
-  CloudLightning
+  Moon
 } from 'lucide-react';
-import { cn } from '../../utils/cn';
 
 interface HeaderProps {
   setIsMobileOpen: (open: boolean) => void;
@@ -68,7 +64,7 @@ export const Header: React.FC<HeaderProps> = ({ setIsMobileOpen }) => {
       {/* Right widgets */}
       <div className="flex items-center gap-3">
         {/* Database Status Badge */}
-        <div 
+        {/* <div 
           className={cn(
             "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold select-none border",
             isMock 
@@ -89,12 +85,12 @@ export const Header: React.FC<HeaderProps> = ({ setIsMobileOpen }) => {
             </>
           )}
           <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", isMock ? "bg-amber-500" : "bg-indigo-500")} />
-        </div>
+        </div> */}
 
         {/* Theme Toggle Button */}
         <button
           onClick={toggleTheme}
-          className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 shadow-sm hover:shadow-premium transition-all duration-300"
+          className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 shadow-sm hover:shadow-premium transition-all duration-300 cursor-pointer"
           title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
         >
           {theme === 'light' ? (

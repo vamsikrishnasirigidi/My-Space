@@ -21,12 +21,14 @@ import {
   CalendarDays
 } from 'lucide-react';
 import { cn } from '../utils/cn';
+import { getLocalDateISO } from '../utils/date';
 
 // FullCalendar core and plugins
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
-import interactionPlugin from '@fullcalendar/interaction';
+import interactionPlugin, { type DateClickArg } from '@fullcalendar/interaction';
+import type { EventClickArg } from '@fullcalendar/core';
 
 interface AITodoSuggestion {
   title: string;
@@ -53,7 +55,7 @@ export const TodoPage: React.FC = () => {
   // Form Fields State
   const [formTitle, setFormTitle] = useState('');
   const [formDescription, setFormDescription] = useState('');
-  const [formDate, setFormDate] = useState(new Date().toISOString().split('T')[0]);
+  const [formDate, setFormDate] = useState(getLocalDateISO());
   const [formTime, setFormTime] = useState('');
   const [formStatus, setFormStatus] = useState<'pending' | 'in_progress' | 'completed'>('pending');
 
@@ -76,8 +78,8 @@ export const TodoPage: React.FC = () => {
 
   // Listen to global palette/shortcut custom events
   useEffect(() => {
-    const handleOpenTodo = (e: any) => {
-      const todoId = e.detail;
+    const handleOpenTodo = (e: Event) => {
+      const todoId = (e as CustomEvent<string>).detail;
       const found = todos.find(t => t.id === todoId);
       if (found) {
         handleOpenEditModal(found);
@@ -125,18 +127,18 @@ export const TodoPage: React.FC = () => {
   };
 
   // Open Modal for Add
-  const handleOpenAddModal = (dateStr?: string) => {
+  function handleOpenAddModal(dateStr?: string) {
     setEditingTodo(null);
     setFormTitle('');
     setFormDescription('');
-    setFormDate(dateStr || new Date().toISOString().split('T')[0]);
+    setFormDate(dateStr || getLocalDateISO());
     setFormTime('');
     setFormStatus('pending');
     setIsModalOpen(true);
-  };
+  }
 
   // Open Modal for Edit
-  const handleOpenEditModal = (todo: Todo) => {
+  function handleOpenEditModal(todo: Todo) {
     setEditingTodo(todo);
     setFormTitle(todo.title);
     setFormDescription(todo.description || '');
@@ -144,7 +146,7 @@ export const TodoPage: React.FC = () => {
     setFormTime(todo.todo_time || '');
     setFormStatus(todo.status);
     setIsModalOpen(true);
-  };
+  }
 
   // Save / Update Form Submission
   const handleSaveTodoSubmit = async (e: React.FormEvent) => {
@@ -177,7 +179,7 @@ export const TodoPage: React.FC = () => {
         useActivityStore.getState().addLog('todo', `Created task: "${formTitle}"`);
       }
       setIsModalOpen(false);
-    } catch (err) {
+    } catch {
       toast.error('Failed to save task');
     }
   };
@@ -186,12 +188,12 @@ export const TodoPage: React.FC = () => {
   const handleDeleteTodoClick = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this task?')) {
       try {
-        const titleToLog = editingTodo?.title || 'Untitled task';
+        const titleToLog = todos.find(t => t.id === id)?.title || editingTodo?.title || 'Untitled task';
         await deleteTodo(id);
         toast.success('Task deleted successfully');
         useActivityStore.getState().addLog('todo', `Deleted task: "${titleToLog}"`);
         setIsModalOpen(false);
-      } catch (err) {
+      } catch {
         toast.error('Failed to delete task');
       }
     }
@@ -205,7 +207,7 @@ export const TodoPage: React.FC = () => {
       await updateTodo(todo.id, { status: nextStatus });
       toast.success(nextStatus === 'completed' ? 'Task marked as completed' : 'Task marked as pending');
       useActivityStore.getState().addLog('todo', nextStatus === 'completed' ? `Completed task: "${todo.title}"` : `Marked task as pending: "${todo.title}"`);
-    } catch (err) {
+    } catch {
       toast.error('Failed to toggle status');
     }
   };
@@ -240,7 +242,7 @@ export const TodoPage: React.FC = () => {
         await updateTodo(todoId, { status: nextStatus });
         toast.success(`Task status updated to ${nextStatus.replace('_', ' ')}`);
         useActivityStore.getState().addLog('todo', `Moved task to ${nextStatus.replace('_', ' ')}: "${todoToMove.title}"`);
-      } catch (err) {
+      } catch {
         toast.error('Failed to drop task');
       }
     }
@@ -291,7 +293,7 @@ export const TodoPage: React.FC = () => {
       setAiSuggestions(suggestions);
       toast.success('Successfully generated structured schedule!');
       useActivityStore.getState().addLog('ai', `Generated smart Todo schedule for goal: "${aiGoal}"`);
-    } catch (err) {
+    } catch {
       toast.error('AI generator encountered an issue');
     } finally {
       setIsGenerating(false);
@@ -307,7 +309,7 @@ export const TodoPage: React.FC = () => {
         await addTodo({
           title: item.title,
           description: `${item.description} ${item.subtasks ? '\nSubtasks: ' + item.subtasks.join(', ') : ''}`,
-          todo_date: new Date().toISOString().split('T')[0],
+          todo_date: getLocalDateISO(),
           status: 'pending'
         });
       }
@@ -316,7 +318,7 @@ export const TodoPage: React.FC = () => {
       setAiSuggestions([]);
       setAiGoal('');
       setIsAIPanelOpen(false);
-    } catch (err) {
+    } catch {
       toast.error('Failed to import suggestions');
     }
   };
@@ -327,12 +329,12 @@ export const TodoPage: React.FC = () => {
   };
 
   // Handle clicking calendar cells to add todo
-  const handleCalendarDateClick = (arg: any) => {
+  const handleCalendarDateClick = (arg: DateClickArg) => {
     handleOpenAddModal(arg.dateStr);
   };
 
   // Handle clicking events in calendar to edit
-  const handleCalendarEventClick = (arg: any) => {
+  const handleCalendarEventClick = (arg: EventClickArg) => {
     const todoData = arg.event.extendedProps as Todo;
     handleOpenEditModal(todoData);
   };
@@ -430,6 +432,7 @@ export const TodoPage: React.FC = () => {
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input
               type="text"
+              data-global-search="true"
               placeholder="Search tasks..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
@@ -443,7 +446,7 @@ export const TodoPage: React.FC = () => {
               <Filter className="h-3.5 w-3.5 text-slate-400 ml-2" />
               <select
                 value={statusFilter}
-                onChange={e => setStatusFilter(e.target.value as any)}
+                onChange={e => setStatusFilter(e.target.value as 'all' | 'pending' | 'in_progress' | 'completed')}
                 className="py-1 pl-1 pr-6 text-xs bg-transparent text-slate-600 dark:text-slate-300 font-semibold focus:outline-none cursor-pointer border-0"
               >
                 <option value="all">All States</option>
@@ -506,7 +509,7 @@ export const TodoPage: React.FC = () => {
               <div className="flex flex-col gap-6 max-h-[600px] overflow-y-auto pr-1">
                 {Object.keys(groupedTodos).map(dateStr => {
                   const dateObj = new Date(dateStr + 'T00:00:00');
-                  const isToday = dateStr === new Date().toISOString().split('T')[0];
+                  const isToday = dateStr === getLocalDateISO();
                   
                   return (
                     <div key={dateStr} className="flex flex-col gap-3 animate-fade-in">
@@ -661,7 +664,7 @@ export const TodoPage: React.FC = () => {
                         setEditingTodo(null);
                         setFormTitle('');
                         setFormDescription('');
-                        setFormDate(new Date().toISOString().split('T')[0]);
+                        setFormDate(getLocalDateISO());
                         setFormStatus(columnStatus);
                         setIsModalOpen(true);
                       }}
@@ -855,7 +858,7 @@ export const TodoPage: React.FC = () => {
                 <div className="relative">
                   <select
                     value={formStatus}
-                    onChange={e => setFormStatus(e.target.value as any)}
+                    onChange={e => setFormStatus(e.target.value as 'pending' | 'in_progress' | 'completed')}
                     className="w-full px-4 py-2.5 text-xs bg-slate-50 dark:bg-slate-950/40 border border-slate-200/60 dark:border-slate-800/50 rounded-2xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 dark:focus:border-brand-400 transition-all text-slate-800 dark:text-white cursor-pointer appearance-none"
                   >
                     <option value="pending">Pending</option>

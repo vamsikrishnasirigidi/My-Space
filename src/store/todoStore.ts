@@ -25,6 +25,7 @@ export const useTodoStore = create<TodoState>((set) => ({
         const list = databaseMock.getTodos();
         set({ todos: list, loading: false });
       } else {
+        if (!supabase) throw new Error('Supabase client is not initialized.');
         const user = useAuthStore.getState().user;
         if (!user) return;
 
@@ -49,6 +50,7 @@ export const useTodoStore = create<TodoState>((set) => ({
         const newTodo = databaseMock.createTodo(todo);
         set(state => ({ todos: [newTodo, ...state.todos] }));
       } else {
+        if (!supabase) throw new Error('Supabase client is not initialized.');
         const user = useAuthStore.getState().user;
         if (!user) return;
 
@@ -77,6 +79,7 @@ export const useTodoStore = create<TodoState>((set) => ({
           todos: state.todos.map(t => (t.id === id ? updated : t)),
         }));
       } else {
+        if (!supabase) throw new Error('Supabase client is not initialized.');
         const { error } = await supabase
           .from('todos')
           .update(updates)
@@ -99,6 +102,7 @@ export const useTodoStore = create<TodoState>((set) => ({
         databaseMock.deleteTodo(id);
         set(state => ({ todos: state.todos.filter(t => t.id !== id) }));
       } else {
+        if (!supabase) throw new Error('Supabase client is not initialized.');
         const { error } = await supabase
           .from('todos')
           .delete()
