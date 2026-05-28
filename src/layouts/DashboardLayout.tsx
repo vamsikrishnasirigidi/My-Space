@@ -10,17 +10,12 @@ import { Sparkles } from 'lucide-react';
 
 export const DashboardLayout: React.FC = () => {
   const navigate = useNavigate();
-  const { user, loading, initialized, checkSession } = useAuthStore();
+  const { user, loading, initialized } = useAuthStore();
   const theme = useThemeStore(state => state.theme);
   const setTheme = useThemeStore(state => state.setTheme);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
-
-  // Initialize session and sync visual theme on mount
-  useEffect(() => {
-    checkSession();
-  }, [checkSession]);
 
   // Synchronize system styling once user is verified
   useEffect(() => {

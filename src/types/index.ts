@@ -3,6 +3,7 @@ export interface UserProfile {
   name: string;
   email: string;
   theme: 'light' | 'dark';
+  is_guest?: boolean;
   created_at?: string;
 }
 

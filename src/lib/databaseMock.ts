@@ -7,6 +7,7 @@ const DEFAULT_USER: UserProfile = {
   name: 'Vamsi',
   email: 'vamsi@myspace.app',
   theme: 'light',
+  is_guest: false,
   created_at: new Date().toISOString(),
 };
 
