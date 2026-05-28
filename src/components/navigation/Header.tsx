@@ -1,6 +1,8 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
+import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
+import { resolveTheme } from '../../utils/theme';
 import { 
   Menu, 
   Sun, 
@@ -13,10 +15,15 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ setIsMobileOpen }) => {
   const location = useLocation();
-  const { theme, setTheme } = useThemeStore();
+  const { theme, toggleResolvedTheme } = useThemeStore();
+  const { user, updateProfile } = useAuthStore();
+  const isDark = resolveTheme(theme) === 'dark';
 
   const toggleTheme = () => {
-    setTheme(theme === 'light' ? 'dark' : 'light');
+    const next = toggleResolvedTheme();
+    if (user) {
+      void updateProfile(user.name, next);
+    }
   };
 
   const getPageTitle = (pathname: string) => {
@@ -91,12 +98,12 @@ export const Header: React.FC<HeaderProps> = ({ setIsMobileOpen }) => {
         <button
           onClick={toggleTheme}
           className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 shadow-sm hover:shadow-premium transition-all duration-300 cursor-pointer"
-          title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+          title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
         >
-          {theme === 'light' ? (
-            <Moon className="h-4.5 w-4.5 transition-all text-indigo-500" />
-          ) : (
+          {isDark ? (
             <Sun className="h-4.5 w-4.5 transition-all text-amber-400" />
+          ) : (
+            <Moon className="h-4.5 w-4.5 transition-all text-indigo-500" />
           )}
         </button>
       </div>

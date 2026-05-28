@@ -8,6 +8,7 @@ It includes:
 - Notes workspace (TipTap rich editor)
 - AI formatter and AI content generator
 - Supabase auth/data mode with local mock fallback
+- Google OAuth, Email/Password auth, guest auth, and password recovery
 
 ## Tech Stack
 
@@ -39,9 +40,11 @@ Create a `.env.local` file at project root.
 ```env
 VITE_SUPABASE_URL=your_supabase_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_ALLOW_MOCK_AUTH=false
 ```
 
-If these are missing, app runs in local mock mode automatically.
+If these are missing and `VITE_ALLOW_MOCK_AUTH=true`, app uses local mock auth mode.
+For real Supabase auth (recommended), keep `VITE_ALLOW_MOCK_AUTH=false`.
 
 ### Required for AI generation
 
@@ -87,6 +90,18 @@ Set these in Vercel Project Settings:
 - `OPENAI_API_KEY` (+ optional `OPENAI_MODEL`)
 - `VITE_SUPABASE_URL` (if using Supabase)
 - `VITE_SUPABASE_ANON_KEY` (if using Supabase)
+
+## Supabase Auth Setup Steps
+
+1. Run SQL script: `supabase/auth_setup.sql` in Supabase SQL Editor.
+2. In Supabase Authentication settings:
+   - Enable Google provider (already working in your setup).
+   - Enable Email provider.
+   - Enable Anonymous Sign-Ins (for "Continue as Guest").
+3. Add redirect URLs:
+   - `http://localhost:5173/reset-password`
+   - `https://<your-domain>/reset-password`
+4. Ensure reset email template uses Supabase default recovery flow.
 
 ## Notes
 

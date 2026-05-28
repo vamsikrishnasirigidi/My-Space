@@ -1,33 +1,36 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Navigate, Outlet, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
+import { resolveTheme } from '../utils/theme';
 import { Sidebar } from '../components/navigation/Sidebar';
 import { Header } from '../components/navigation/Header';
 import { ToastContainer } from '../components/ui/ToastContainer';
 import { CommandPalette } from '../components/ui/CommandPalette';
-import { Sparkles } from 'lucide-react';
 
 export const DashboardLayout: React.FC = () => {
   const navigate = useNavigate();
-  const { user, loading, initialized, checkSession } = useAuthStore();
-  const theme = useThemeStore(state => state.theme);
-  const setTheme = useThemeStore(state => state.setTheme);
+  const { user } = useAuthStore();
+  const toggleResolvedTheme = useThemeStore(state => state.toggleResolvedTheme);
+  const { updateProfile } = useAuthStore();
+  const syncedThemeForUser = useRef<string | null>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
 
-  // Initialize session and sync visual theme on mount
+  // Prefer local theme (login/settings); sync profile once per user in the background.
   useEffect(() => {
-    checkSession();
-  }, [checkSession]);
+    if (!user?.id || syncedThemeForUser.current === user.id) return;
+    syncedThemeForUser.current = user.id;
 
-  // Synchronize system styling once user is verified
-  useEffect(() => {
-    if (user?.theme && theme !== user.theme) {
-      setTheme(user.theme as 'light' | 'dark');
+    const localResolved = resolveTheme(useThemeStore.getState().theme);
+    if (user.theme !== localResolved) {
+      const timer = window.setTimeout(() => {
+        void updateProfile(user.name, localResolved);
+      }, 500);
+      return () => window.clearTimeout(timer);
     }
-  }, [setTheme, theme, user?.theme]);
+  }, [updateProfile, user?.id, user?.name, user?.theme]);
 
   // Global Keyboard Shortcuts Hook
   useEffect(() => {
@@ -51,7 +54,11 @@ export const DashboardLayout: React.FC = () => {
       // Ctrl/Cmd + Shift + D -> Toggle Dark Mode
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'd') {
         e.preventDefault();
-        setTheme(theme === 'light' ? 'dark' : 'light');
+        const next = toggleResolvedTheme();
+        const currentUser = useAuthStore.getState().user;
+        if (currentUser) {
+          void useAuthStore.getState().updateProfile(currentUser.name, next);
+        }
         return;
       }
 
@@ -91,27 +98,7 @@ export const DashboardLayout: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [navigate, setTheme, theme]);
-
-  // Show a gorgeous modern loading skeleton on boot
-  if (!initialized || (loading && !user)) {
-    return (
-      <div className="flex h-screen w-screen flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
-        <div className="relative flex items-center justify-center">
-          {/* Pulsing outer glowing rings */}
-          <div className="absolute h-20 w-20 rounded-2xl bg-brand-500/10 dark:bg-brand-500/5 animate-ping" />
-          <div className="absolute h-14 w-14 rounded-xl bg-brand-500/20 dark:bg-brand-500/10 animate-pulse-subtle" />
-          
-          <div className="relative flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-tr from-brand-500 to-indigo-600 text-white shadow-lg shadow-brand-500/20">
-            <Sparkles className="h-6 w-6 animate-spin-slow" />
-          </div>
-        </div>
-        <span className="mt-5 text-sm font-semibold tracking-wide text-slate-500 dark:text-slate-400 animate-pulse">
-          Opening your space...
-        </span>
-      </div>
-    );
-  }
+  }, [navigate, toggleResolvedTheme]);
 
   // Redirect to authorization barrier if no active session exists
   if (!user) {

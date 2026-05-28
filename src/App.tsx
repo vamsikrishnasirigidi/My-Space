@@ -1,3 +1,4 @@
+import { useEffect, type ReactElement } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { DashboardLayout } from './layouts/DashboardLayout';
 import { Login } from './pages/Login';
@@ -7,16 +8,60 @@ import { NotesPage } from './pages/Notes';
 import { FormatterPage } from './pages/Formatter';
 import { GeneratorPage } from './pages/Generator';
 import { SettingsPage } from './pages/Settings';
+import { ResetPasswordPage } from './pages/ResetPassword';
+import { useAuthStore } from './store/authStore';
+
+const AuthLoadingScreen = () => (
+  <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
+    <div className="h-10 w-10 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
+  </div>
+);
+
+const ProtectedRoute = ({ children }: { children: ReactElement }) => {
+  const { initialized, isAuthenticated } = useAuthStore();
+  if (!initialized) return <AuthLoadingScreen />;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  return children;
+};
+
+const PublicOnlyRoute = ({ children }: { children: ReactElement }) => {
+  const { initialized, isAuthenticated } = useAuthStore();
+  if (!initialized) return <AuthLoadingScreen />;
+  if (isAuthenticated) return <Navigate to="/" replace />;
+  return children;
+};
 
 function App() {
+  const { initialized, initializeAuth } = useAuthStore();
+
+  useEffect(() => {
+    if (!initialized) {
+      initializeAuth();
+    }
+  }, [initializeAuth, initialized]);
+
   return (
     <BrowserRouter>
       <Routes>
-        {/* Secure Login Barrier */}
-        <Route path="/login" element={<Login />} />
+        <Route
+          path="/login"
+          element={
+            <PublicOnlyRoute>
+              <Login />
+            </PublicOnlyRoute>
+          }
+        />
 
-        {/* Unified Dashboard Sub-routes */}
-        <Route path="/" element={<DashboardLayout />}>
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }
+        >
           <Route index element={<Home />} />
           <Route path="todo" element={<TodoPage />} />
           <Route path="notes" element={<NotesPage />} />
@@ -25,7 +70,6 @@ function App() {
           <Route path="settings" element={<SettingsPage />} />
         </Route>
 
-        {/* Global Wildcard Redirect */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

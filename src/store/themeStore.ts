@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { resolveTheme } from '../utils/theme';
 
 export type Theme = 'light' | 'dark' | 'system';
 export type AccentColor = 'indigo' | 'blue' | 'purple' | 'green' | 'orange';
@@ -20,6 +21,7 @@ interface ThemeState {
   setRoundedLevel: (level: RoundedLevel) => void;
   
   applyThemeSettings: () => void;
+  toggleResolvedTheme: () => 'light' | 'dark';
 }
 
 export const useThemeStore = create<ThemeState>()(
@@ -56,16 +58,18 @@ export const useThemeStore = create<ThemeState>()(
         get().applyThemeSettings();
       },
 
+      toggleResolvedTheme: () => {
+        const current = resolveTheme(get().theme);
+        const next = current === 'light' ? 'dark' : 'light';
+        get().setTheme(next);
+        return next;
+      },
+
       applyThemeSettings: () => {
         const { theme, accentColor, sidebarStyle, compactMode, roundedLevel } = get();
         const root = window.document.documentElement;
-        
-        // 1. Theme Configuration
-        let actualTheme = theme;
-        if (theme === 'system') {
-          actualTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-        }
-        
+        const actualTheme = resolveTheme(theme);
+
         if (actualTheme === 'dark') {
           root.classList.add('dark');
         } else {
