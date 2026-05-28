@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { ArrowRight, KeyRound, Mail, UserPlus, UserRoundX } from 'lucide-react';
+import { ArrowRight, KeyRound, Mail, Moon, Sun, UserPlus, UserRoundX } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
+import { useThemeStore } from '../store/themeStore';
 import { toast } from '../store/toastStore';
 import { cn } from '../utils/cn';
 
@@ -20,6 +21,8 @@ export const Login: React.FC = () => {
     sendPasswordResetEmail,
     signInAsGuest,
   } = useAuthStore();
+  const theme = useThemeStore(state => state.theme);
+  const setTheme = useThemeStore(state => state.setTheme);
 
   const [mode, setMode] = useState<AuthMode>('signin');
   const [isHovered, setIsHovered] = useState(false);
@@ -27,6 +30,7 @@ export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [emailTouched, setEmailTouched] = useState(false);
 
   useEffect(() => {
     if (!initialized) {
@@ -44,7 +48,24 @@ export const Login: React.FC = () => {
   const handleModeSwitch = (nextMode: AuthMode) => {
     setMode(nextMode);
     clearFields();
+    setEmailTouched(false);
   };
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const trimmedEmail = email.trim();
+  const isEmailValid = emailRegex.test(trimmedEmail);
+  const hasMinPassword = password.length >= 8;
+  const canSubmit =
+    mode === 'forgot'
+      ? isEmailValid && !loading
+      : mode === 'signin'
+        ? isEmailValid && hasMinPassword && !loading
+        : isEmailValid &&
+          name.trim().length > 1 &&
+          hasMinPassword &&
+          confirmPassword.length >= 8 &&
+          password === confirmPassword &&
+          !loading;
 
   const handleEmailAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,13 +117,23 @@ export const Login: React.FC = () => {
   }
 
   return (
-    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-slate-50 px-4 transition-colors duration-300 dark:bg-slate-950">
+    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-slate-50 px-3 py-6 transition-colors duration-300 sm:px-4 dark:bg-slate-950">
       <div className="absolute left-1/4 top-1/4 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/10 blur-3xl dark:bg-indigo-500/5" />
       <div className="absolute bottom-1/4 right-1/4 h-[500px] w-[500px] translate-x-1/2 translate-y-1/2 rounded-full bg-blue-500/10 blur-3xl dark:bg-blue-500/5" />
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)]" />
 
+      <button
+        type="button"
+        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+        className="absolute right-4 top-4 z-20 flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200/80 bg-white/90 text-slate-600 shadow-sm backdrop-blur-sm transition-all hover:bg-slate-50 dark:border-slate-700/80 dark:bg-slate-900/90 dark:text-slate-300 dark:hover:bg-slate-800 sm:right-6 sm:top-6"
+        title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+        aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+      >
+        {theme === 'dark' ? <Sun className="h-4.5 w-4.5 text-amber-400" /> : <Moon className="h-4.5 w-4.5 text-indigo-500" />}
+      </button>
+
       <div className="z-10 w-full max-w-md">
-        <div className="mb-8 text-center">
+        <div className="mb-6 text-center sm:mb-8">
           <div className="mx-auto mb-4 flex h-12 w-12 select-none items-center justify-center rounded-2xl bg-gradient-to-tr from-indigo-500 to-blue-600 text-2xl font-extrabold text-white shadow-lg shadow-indigo-500/25 animate-pulse-subtle">
             M
           </div>
@@ -114,7 +145,7 @@ export const Login: React.FC = () => {
           </p>
         </div>
 
-        <div className="glass-panel relative overflow-hidden rounded-3xl border border-slate-200/50 p-8 shadow-premium dark:border-slate-800/40">
+        <div className="glass-panel relative overflow-hidden rounded-3xl border border-slate-200/50 p-5 shadow-premium sm:p-8 dark:border-slate-800/40">
           <div className="mb-4 grid grid-cols-3 gap-2 rounded-xl bg-slate-100/70 p-1 dark:bg-slate-900/50">
             <button
               type="button"
@@ -168,10 +199,14 @@ export const Login: React.FC = () => {
             <input
               type="email"
               value={email}
-              onChange={e => setEmail(e.target.value)}
+                onChange={e => setEmail(e.target.value)}
+                onBlur={() => setEmailTouched(true)}
               placeholder="Email address"
               className="w-full rounded-xl border border-slate-200/70 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-800/40 dark:bg-slate-950/40 dark:text-white"
             />
+            {emailTouched && email.length > 0 && !isEmailValid && (
+              <p className="text-[11px] font-semibold text-rose-500">Enter a valid email address.</p>
+            )}
 
             {mode !== 'forgot' && (
               <input
@@ -181,6 +216,9 @@ export const Login: React.FC = () => {
                 placeholder="Password"
                 className="w-full rounded-xl border border-slate-200/70 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-800/40 dark:bg-slate-950/40 dark:text-white"
               />
+            )}
+            {mode !== 'forgot' && password.length > 0 && password.length < 6 && (
+              <p className="text-[11px] font-semibold text-rose-500">Password should be minimum 6 characters.</p>
             )}
 
             {mode === 'signup' && (
@@ -195,7 +233,7 @@ export const Login: React.FC = () => {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={!canSubmit}
               className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-500 to-blue-600 px-4 py-3 text-sm font-semibold text-white transition-all hover:from-indigo-600 hover:to-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading ? (
@@ -208,8 +246,8 @@ export const Login: React.FC = () => {
                 <KeyRound className="h-4.5 w-4.5" />
               )}
               <span>
-                {mode === 'signup' && 'Create Account'}
-                {mode === 'signin' && 'Continue with Email'}
+                {mode === 'signup' && 'Sign Up'}
+                {mode === 'signin' && 'Sign In'}
                 {mode === 'forgot' && 'Send Reset Email'}
               </span>
             </button>

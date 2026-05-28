@@ -27,5 +27,11 @@ if (isMock) {
 
 // Safely initialize Supabase only if valid configuration exists, avoiding boot failures
 export const supabase: SupabaseClient | null = !isMock
-  ? createClient(supabaseUrl, supabaseAnonKey)
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        detectSessionInUrl: true,
+        persistSession: true,
+        autoRefreshToken: true,
+      },
+    })
   : null;

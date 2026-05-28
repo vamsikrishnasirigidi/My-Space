@@ -3,6 +3,7 @@ import type { UserProfile } from '../types';
 import { supabase, isMock, allowMockAuth } from '../lib/supabase';
 import { databaseMock } from '../lib/databaseMock';
 import { toast } from './toastStore';
+import { getPersistedProfileTheme } from '../utils/theme';
 import type { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
 
 interface AuthState {
@@ -27,6 +28,49 @@ interface AuthState {
 }
 
 let authListenerInitialized = false;
+let authInitPromise: Promise<void> | null = null;
+
+const AUTH_INIT_TIMEOUT_MS = 8000;
+const PROFILE_FETCH_TIMEOUT_MS = 5000;
+
+const withTimeout = async <T>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+};
+
+const setUnauthenticated = (set: (partial: Partial<AuthState>) => void) => {
+  set({
+    user: null,
+    currentUser: null,
+    isAuthenticated: false,
+    isGuest: false,
+    loading: false,
+    initialized: true,
+  });
+};
+
+const setAuthenticated = (
+  set: (partial: Partial<AuthState>) => void,
+  profile: UserProfile
+) => {
+  set({
+    user: profile,
+    currentUser: profile,
+    isAuthenticated: true,
+    isGuest: Boolean(profile.is_guest),
+    loading: false,
+    initialized: true,
+  });
+};
 
 const getErrorMessage = (err: unknown, fallback: string) => {
   if (err instanceof Error && err.message) return err.message;
@@ -58,7 +102,7 @@ const getFallbackProfile = (authUser: User): UserProfile => {
       (guest ? 'Guest User' : authUser.email?.split('@')[0]) ||
       'User',
     email: authUser.email || '',
-    theme: 'light',
+    theme: getPersistedProfileTheme(),
     is_guest: guest,
   };
 };
@@ -81,6 +125,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   initialized: false,
 
   initializeAuth: async () => {
+    if (get().initialized) return;
+    if (authInitPromise) return authInitPromise;
+
+    authInitPromise = (async () => {
     try {
       if (canUseMockAuth) {
         const session = databaseMock.getSession();
@@ -113,31 +161,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (!supabase) throw new Error('Supabase client is not initialized.');
       const sb = supabase;
 
-      const syncFromSession = async (session: Session | null, event?: AuthChangeEvent) => {
-        if (!session?.user) {
-          set({
-            user: null,
-            currentUser: null,
-            isAuthenticated: false,
-            isGuest: false,
-            loading: false,
-            initialized: true,
-          });
-          return;
-        }
-
-        const authUser = session.user;
-        const fallbackProfile = getFallbackProfile(authUser);
-
+      const hydrateProfileFromDb = async (authUser: User, fallbackProfile: UserProfile) => {
         try {
-          const { data: profile } = await sb
-            .from('users')
-            .select('*')
-            .eq('id', authUser.id)
-            .maybeSingle();
+          const { data: profile } = await withTimeout(
+            (async () =>
+              sb.from('users').select('*').eq('id', authUser.id).maybeSingle())(),
+            PROFILE_FETCH_TIMEOUT_MS,
+            'Profile fetch'
+          );
 
           if (!profile) {
-            await sb.from('users').upsert(
+            void sb.from('users').upsert(
               [
                 {
                   id: fallbackProfile.id,
@@ -149,14 +183,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               ],
               { onConflict: 'id' }
             );
-            set({
-              user: fallbackProfile,
-              currentUser: fallbackProfile,
-              isAuthenticated: true,
-              isGuest: Boolean(fallbackProfile.is_guest),
-              loading: false,
-              initialized: true,
-            });
             return;
           }
 
@@ -164,51 +190,72 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             ...(profile as UserProfile),
             is_guest: Boolean((profile as UserProfile).is_guest ?? fallbackProfile.is_guest),
           };
-
-          set({
-            user: normalizedProfile,
-            currentUser: normalizedProfile,
-            isAuthenticated: true,
-            isGuest: Boolean(normalizedProfile.is_guest),
-            loading: false,
-            initialized: true,
-          });
+          setAuthenticated(set, normalizedProfile);
         } catch (syncErr) {
-          if (event !== 'TOKEN_REFRESHED') {
-            console.error('Auth profile sync error:', syncErr);
-          }
-          set({
-            user: fallbackProfile,
-            currentUser: fallbackProfile,
-            isAuthenticated: true,
-            isGuest: Boolean(fallbackProfile.is_guest),
-            loading: false,
-            initialized: true,
-          });
+          console.warn('Profile hydrate skipped:', syncErr);
         }
       };
 
+      const syncFromSession = (session: Session | null, event?: AuthChangeEvent) => {
+        if (!session?.user) {
+          const signedOut =
+            event === 'SIGNED_OUT' ||
+            (event === 'INITIAL_SESSION' && !get().isAuthenticated);
+
+          if (signedOut || !get().isAuthenticated) {
+            setUnauthenticated(set);
+          }
+          return;
+        }
+
+        if (event === 'TOKEN_REFRESHED' && get().isAuthenticated) {
+          return;
+        }
+
+        const fallbackProfile = getFallbackProfile(session.user);
+        setAuthenticated(set, fallbackProfile);
+        void hydrateProfileFromDb(session.user, fallbackProfile);
+      };
+
       if (!authListenerInitialized) {
-        sb.auth.onAuthStateChange(async (event, session) => {
-          await syncFromSession(session, event);
+        sb.auth.onAuthStateChange((event, session) => {
+          setTimeout(() => {
+            syncFromSession(session, event);
+          }, 0);
         });
         authListenerInitialized = true;
       }
 
-      const { data: { session } } = await sb.auth.getSession();
-      await syncFromSession(session);
+      let session: Session | null = null;
+      try {
+        const { data } = await withTimeout(
+          sb.auth.getSession(),
+          AUTH_INIT_TIMEOUT_MS,
+          'Auth session'
+        );
+        session = data.session;
+      } catch (sessionErr) {
+        console.warn('getSession slow or failed, continuing:', sessionErr);
+      }
+
+      syncFromSession(session, 'INITIAL_SESSION');
+
+      if (!get().initialized) {
+        setUnauthenticated(set);
+      }
     } catch (err: unknown) {
       console.error('Initialize Auth Error:', err);
       toast.error(getErrorMessage(err, 'Failed to initialize authentication session.'));
-      set({
-        user: null,
-        currentUser: null,
-        isAuthenticated: false,
-        isGuest: false,
-        loading: false,
-        initialized: true,
-      });
+      setUnauthenticated(set);
+    } finally {
+      if (!get().initialized) {
+        setUnauthenticated(set);
+      }
+      authInitPromise = null;
     }
+    })();
+
+    return authInitPromise;
   },
 
   signUpWithEmail: async (email, password, name) => {
@@ -314,10 +361,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const { error } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
-            redirectTo: window.location.origin,
+            redirectTo: `${window.location.origin}/`,
           },
         });
         if (error) throw error;
+        set({ loading: false });
       }
     } catch (err: unknown) {
       console.error('Google Sign In Error:', err);
@@ -574,7 +622,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const current = get().user;
     if (!current) return;
 
-    set({ loading: true });
+    const silent = get().initialized && get().isAuthenticated;
+    if (!silent) set({ loading: true });
     try {
       if (canUseMockAuth) {
         const updated = databaseMock.updateUser({ name, theme });
@@ -583,7 +632,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           currentUser: updated,
           isAuthenticated: true,
           isGuest: Boolean(updated.is_guest),
-          loading: false,
+          ...(silent ? {} : { loading: false }),
         });
       } else {
         ensureSupabaseConfigured();
@@ -600,13 +649,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           currentUser: next,
           isAuthenticated: true,
           isGuest: Boolean(next.is_guest),
-          loading: false,
+          ...(silent ? {} : { loading: false }),
         });
       }
     } catch (err: unknown) {
       console.error('Update Profile Error:', err);
       toast.error(getErrorMessage(err, 'Failed to update profile.'));
-      set({ loading: false });
+      if (!silent) set({ loading: false });
     }
   },
 
